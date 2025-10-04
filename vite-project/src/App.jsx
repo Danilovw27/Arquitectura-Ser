@@ -12,6 +12,7 @@ import Register from '/src/pages/Register'
 import Lessons from '/src/pages/Lessons'
 import Dashboard from './pages/Dashboard'
 import UsersInterface from './pages/UsersInterface'
+import Login from './pages/Login'
 
 
 
@@ -21,7 +22,7 @@ function App() {
    <BrowserRouter>
     <Routes>
       {/*Rutas */}
-      <Route path='/' element={<HomeHooks/>} ></Route>
+      <Route path='/' element={<Login/>} ></Route>
       <Route path='/useEffect' element={<HookUseEffect/>} ></Route>
       <Route path='/useState' element={<HookUseState/>} ></Route>
       <Route path='/useNavigate' element={<HookUseNavigate/>} ></Route>
@@ -32,6 +33,7 @@ function App() {
       <Route path='/Lessons' element={<Lessons/>} ></Route>
       <Route path='/Dashboard' element={<Dashboard/>} ></Route>
       <Route path='/Users' element={<UsersInterface/>} ></Route>
+      <Route path='/Login' element={<Login/>} ></Route>
     </Routes>
    
    </BrowserRouter>
