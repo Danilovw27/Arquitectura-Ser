@@ -4,13 +4,12 @@ import { getAuth, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDd5Ud4kw5WsaAAWpxdtgq6LppOuTMd94M",
-  authDomain: "arquitecturaos.firebaseapp.com",
-  projectId: "arquitecturaos",
-  storageBucket: "arquitecturaos.firebasestorage.app",
-  messagingSenderId: "889758830565",
-  appId: "1:889758830565:web:433ee6d9ed8265c40c290c",
-  measurementId: "G-1093HM00K2"
+  apiKey: "AIzaSyCWttbyjL2Lv0G_vhTPKkY3lzUbvX7yDik",
+  authDomain: "arquitectura-ser.firebaseapp.com",
+  projectId: "arquitectura-ser",
+  storageBucket: "arquitectura-ser.firebasestorage.app",
+  messagingSenderId: "298588646307",
+  appId: "1:298588646307:web:e32bd4de87550f84fa4816"
 };
 
 // Initialize Firebase
