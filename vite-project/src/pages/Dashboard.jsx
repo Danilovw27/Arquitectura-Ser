@@ -10,7 +10,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center p-6">
+    <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 overflow-y-auto p-5">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-20 w-32 h-32 bg-white/5 rounded-full blur-3xl"></div>
@@ -18,7 +18,7 @@ const Dashboard = () => {
         <div className="absolute top-1/2 left-1/2 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
       </div>
 
-      <div className="relative w-full max-w-5xl">
+      <div className="relative mx-auto w-full max-w-5xl">
         {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-3 text-white mb-4">
@@ -139,7 +139,7 @@ const Dashboard = () => {
         </div>
 
         {/* Bottom Info */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-4">
           <p className="text-white/80">
             Haz clic en cualquier módulo para acceder a sus funcionalidades
           </p>

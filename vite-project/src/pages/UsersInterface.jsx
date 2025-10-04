@@ -386,7 +386,7 @@ const UsersInterface = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-6">
+    <div className="fixed inset-0 bg-gradient-to-br from-green-800 via-emerald-800 to-green-400 overflow-y-auto p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -456,7 +456,7 @@ const UsersInterface = () => {
 
             <button
               onClick={loadUsers}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
+              className="bg-gradient-to-r from-green-700 to-green-800 text-white px-4 py-2 rounded-lg transition-all duration-200"
             >
               Actualizar
             </button>
@@ -480,7 +480,7 @@ const UsersInterface = () => {
             {filteredUsers.map((user) => (
               <div key={user.id} className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-700 to-green-800 rounded-full flex items-center justify-center text-white font-semibold">
                     {getInitials(user.firstName, user.lastName)}
                   </div>
                   <div className="flex-1">

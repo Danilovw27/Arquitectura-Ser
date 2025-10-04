@@ -12,7 +12,7 @@ import Register from '/src/pages/Register'
 import Lessons from '/src/pages/Lessons'
 import Dashboard from './pages/Dashboard'
 import UsersInterface from './pages/UsersInterface'
-import Login from '/src/pages/Login'
+import Login from './pages/Login'
 
 
 

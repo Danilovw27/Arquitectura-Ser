@@ -224,7 +224,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex overflow-y-auto">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-20 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
@@ -233,7 +233,7 @@ const Login = () => {
         <div className="absolute bottom-20 right-20 w-16 h-16 bg-white/15 rounded-full blur-lg"></div>
       </div>
 
-      <div className="relative w-full max-w-4xl flex bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative mx-auto w-full  flex bg-white/95 backdrop-blur-sm shadow-2xl overflow-hidden">
         {/* Left Side - Illustration */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-purple-600 to-pink-500 p-12 flex-col justify-center items-center relative">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-600/90 to-pink-500/90"></div>

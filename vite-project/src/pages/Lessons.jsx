@@ -304,8 +304,8 @@ const LessonsInterface = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-gray-700 rounded-xl to-blue-400 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="fixed inset-0 bg-gradient-to-br from-indigo-600 via-gray-700 to-blue-400 overflow-y-auto">
+      <div className="w-4/5 h-full mx-auto my-[2%] p-5 md:p-6 lg:p-8 " >
         
         {/* HEADER */}
         <div className="flex items-center justify-between mb-8">
