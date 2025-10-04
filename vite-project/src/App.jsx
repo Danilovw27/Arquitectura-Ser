@@ -13,6 +13,8 @@ import Lessons from '/src/pages/Lessons'
 import Dashboard from './pages/Dashboard'
 import UsersInterface from './pages/UsersInterface'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 
 
@@ -34,6 +36,9 @@ function App() {
       <Route path='/Dashboard' element={<Dashboard/>} ></Route>
       <Route path='/Users' element={<UsersInterface/>} ></Route>
       <Route path='/Login' element={<Login/>} ></Route>
+      <Route path='/ForgotPassword' element={<ForgotPassword/>} ></Route>
+      <Route path='/ResetPassword' element={<ResetPassword/>} ></Route>
+
     </Routes>
    
    </BrowserRouter>
