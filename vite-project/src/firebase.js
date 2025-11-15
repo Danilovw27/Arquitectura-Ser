@@ -1,24 +1,47 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { getFirestore } from "firebase/firestore";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  GithubAuthProvider,
+  linkWithPopup,
+  linkWithCredential,
+} from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCWttbyjL2Lv0G_vhTPKkY3lzUbvX7yDik",
-  authDomain: "arquitectura-ser.firebaseapp.com",
-  projectId: "arquitectura-ser",
-  storageBucket: "arquitectura-ser.firebasestorage.app",
-  messagingSenderId: "298588646307",
-  appId: "1:298588646307:web:e32bd4de87550f84fa4816"
+  apiKey: "AIzaSyDd5Ud4kw5WsaAAWpxdtgq6LppOuTMd94M",
+  authDomain: "arquitecturaos.firebaseapp.com",
+  projectId: "arquitecturaos",
+  storageBucket: "arquitecturaos.firebasestorage.app",
+  messagingSenderId: "889758830565",
+  appId: "1:889758830565:web:433ee6d9ed8265c40c290c",
+  measurementId: "G-1093HM00K2"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
-const auth = getAuth(app);
-const GoogleProvider = new GoogleAuthProvider();
-const db = getFirestore(app);
+// Initialize services
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-// Export the services
-export { auth, GoogleProvider, db, signOut };
+// Providers
+export const GoogleProvider = new GoogleAuthProvider();
+export const providerFacebook = new FacebookAuthProvider();
+export const providerGitHub = new GithubAuthProvider();
+
+// Configurar scopes
+providerGitHub.addScope('user:email');
+providerGitHub.setCustomParameters({ allow_signup: 'false' });
+GoogleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Helper functions para vinculación
+export const linkProvider = async (user, provider) => {
+  const result = await linkWithPopup(user, provider);
+  return result;
+};
+
+// Exportar proveedores base
+export { GoogleAuthProvider, FacebookAuthProvider, GithubAuthProvider, linkWithCredential };
