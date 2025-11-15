@@ -5,11 +5,10 @@ import {
   db, 
   GoogleProvider, 
   providerFacebook, 
-  providerGitHub  // ← SOLO este para GitHub
+  providerGitHub
 } from '../firebase';
 import { 
-  signInWithPopup, 
-  linkWithCredential, 
+  linkWithCredential,
   GoogleAuthProvider,
   FacebookAuthProvider, 
   GithubAuthProvider,
@@ -55,40 +54,89 @@ const Profile = () => {
     fetchUser();
   }, [navigate]);
 
-  // Función genérica para vincular proveedores
-  const handleLinkProvider = async (provider, providerName, providerId) => {
+  // Función para registrar sesión al vincular
+  const registerLinkSession = async (user, providerId, providerName) => {
+    try {
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      
+      const sessionData = {
+        userId: user.uid,
+        email: user.email,
+        displayName: user.displayName || 'Sin nombre',
+        photoURL: user.photoURL || null,
+        provider: providerId,
+        loginTime: serverTimestamp(),
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        isLinkAction: true, // Marca que fue una vinculación
+      };
+
+      await addDoc(collection(db, 'session_logs'), sessionData);
+      console.log(`Sesión de vinculación registrada: ${providerName}`);
+    } catch (error) {
+      console.error('Error al registrar sesión de vinculación:', error);
+    }
+  };
+
+  // Configuración específica para Google
+  const handleGoogleLink = async () => {
     setLinking(true);
     try {
-      // 1. Iniciar sesión con el proveedor mediante popup
-      const result = await signInWithPopup(auth, provider);
-      const credential = 
-        providerId === 'google.com' ? GoogleAuthProvider.credentialFromResult(result) :
-        providerId === 'facebook.com' ? FacebookAuthProvider.credentialFromResult(result) :
-        GithubAuthProvider.credentialFromResult(result);
-
-      // 2. Vincular el proveedor al usuario actual
-      await linkWithCredential(auth.currentUser, credential);
-
-      // 3. Actualizar Firestore
+      const result = await linkWithPopup(auth.currentUser, GoogleProvider);
+      
+      // Actualizar Firestore
       await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), {
-        providers: arrayUnion(providerId),
+        providers: arrayUnion('google.com'),
         updatedAt: new Date(),
       });
 
-      // 4. Actualizar estado local
-      setProviders(prev => [...prev, providerId]);
-      
-      Swal.fire('✅ Vinculado', `${providerName} vinculado exitosamente`, 'success');
+      // REGISTRAR la sesión de vinculación
+      await registerLinkSession(result.user, 'google.com', 'Google');
+
+      setProviders(prev => [...new Set([...prev, 'google.com'])]);
+      Swal.fire('✅ Vinculado', 'Google vinculado exitosamente', 'success');
       
     } catch (error) {
-      console.error('Error linking provider:', error);
-      
+      console.error('Error linking Google:', error);
       if (error.code === 'auth/provider-already-linked') {
-        Swal.fire('ℹ️', `${providerName} ya está vinculado a tu cuenta`, 'info');
-        // Actualizar estado local si ya está vinculado
-        setProviders(prev => [...prev, providerId]);
+        Swal.fire('ℹ️', 'Google ya está vinculado a tu cuenta', 'info');
+        setProviders(prev => [...new Set([...prev, 'google.com'])]);
       } else if (error.code === 'auth/credential-already-in-use') {
-        Swal.fire('❌ Error', 'Estas credenciales ya están en uso con otra cuenta', 'error');
+        Swal.fire('❌ Error', 'Estas credenciales de Google ya están en uso con otra cuenta', 'error');
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // Usuario cerró el popup, no hacer nada
+      } else {
+        Swal.fire('❌ Error', error.message, 'error');
+      }
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  // Configuración específica para Facebook
+  const handleFacebookLink = async () => {
+    setLinking(true);
+    try {
+      const result = await linkWithPopup(auth.currentUser, providerFacebook);
+      
+      await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), {
+        providers: arrayUnion('facebook.com'),
+        updatedAt: new Date(),
+      });
+
+      // REGISTRAR la sesión de vinculación
+      await registerLinkSession(result.user, 'facebook.com', 'Facebook');
+
+      setProviders(prev => [...new Set([...prev, 'facebook.com'])]);
+      Swal.fire('✅ Vinculado', 'Facebook vinculado exitosamente', 'success');
+      
+    } catch (error) {
+      console.error('Error linking Facebook:', error);
+      if (error.code === 'auth/provider-already-linked') {
+        Swal.fire('ℹ️', 'Facebook ya está vinculado a tu cuenta', 'info');
+        setProviders(prev => [...new Set([...prev, 'facebook.com'])]);
+      } else if (error.code === 'auth/credential-already-in-use') {
+        Swal.fire('❌ Error', 'Estas credenciales de Facebook ya están en uso con otra cuenta', 'error');
       } else if (error.code === 'auth/popup-closed-by-user') {
         // Usuario cerró el popup, no hacer nada
       } else {
@@ -101,144 +149,84 @@ const Profile = () => {
 
   // Configuración específica para GitHub
   const handleGithubLink = async () => {
-  setLinking(true);
-  try {
-    // 1. Verificar que el usuario esté autenticado con el método principal (email/password)
-    if (!auth.currentUser) {
-      throw new Error('No hay usuario autenticado');
-    }
+    setLinking(true);
+    try {
+      // Verificar que el usuario esté autenticado
+      if (!auth.currentUser) {
+        throw new Error('No hay usuario autenticado');
+      }
 
-    // 2. Crear provider de GitHub con configuración para obtener email
-    const githubProvider = new GithubAuthProvider();
-    githubProvider.addScope('user:email');
-    githubProvider.setCustomParameters({ 
-      allow_signup: 'false',
-      prompt: 'consent',
-      login: auth.currentUser.email // Forzar el email del usuario actual
-    });
+      // Crear provider de GitHub con configuración para obtener email
+      const githubProvider = new GithubAuthProvider();
+      githubProvider.addScope('user:email');
+      githubProvider.setCustomParameters({ 
+        allow_signup: 'false',
+        prompt: 'consent',
+        login: auth.currentUser.email
+      });
 
-    // 3. Vincular usando linkWithPopup (NO signInWithPopup)
-    const result = await linkWithPopup(auth.currentUser, githubProvider);
-    
-    // 4. Obtener el usuario actualizado
-    const updatedUser = result.user;
-    
-    // 5. Verificar y actualizar el email si es necesario
-    let finalEmail = updatedUser.email;
-    
-    // Si GitHub no devolvió el email, usar el email actual del usuario
-    if (!finalEmail) {
-      finalEmail = auth.currentUser.email;
-      console.log('GitHub no proporcionó email, usando email actual:', finalEmail);
-    }
+      const result = await linkWithPopup(auth.currentUser, githubProvider);
+      
+      // Obtener el usuario actualizado
+      const updatedUser = result.user;
+      
+      // Verificar y actualizar el email si es necesario
+      let finalEmail = updatedUser.email || auth.currentUser.email;
 
-    // 6. Actualizar Firestore con el proveedor vinculado
-    await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), {
-      providers: arrayUnion('github.com'),
-      email: finalEmail, // Asegurar el email correcto
-      updatedAt: new Date(),
-    });
+      // Actualizar Firestore con el proveedor vinculado
+      await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), {
+        providers: arrayUnion('github.com'),
+        email: finalEmail,
+        updatedAt: new Date(),
+      });
 
-    // 7. Actualizar estado local
-    setProviders(prev => {
-      const newProviders = [...prev, 'github.com'];
-      return [...new Set(newProviders)]; // Eliminar duplicados
-    });
-    
-    Swal.fire({
-      icon: 'success',
-      title: '✅ Vinculado',
-      text: `GitHub vinculado exitosamente a ${finalEmail}`,
-      timer: 3000
-    });
+      // REGISTRAR la sesión de vinculación
+      await registerLinkSession(updatedUser, 'github.com', 'GitHub');
 
-  } catch (error) {
-    console.error('Error detallado linking GitHub:', error);
-    
-    if (error.code === 'auth/provider-already-linked') {
-      Swal.fire('ℹ️', 'GitHub ya está vinculado a tu cuenta', 'info');
       // Actualizar estado local
-      setProviders(prev => [...prev, 'github.com']);
-    } else if (error.code === 'auth/email-already-in-use') {
+      setProviders(prev => [...new Set([...prev, 'github.com'])]);
+      
       Swal.fire({
-        icon: 'error',
-        title: 'Email en uso',
-        text: 'Este email de GitHub ya está asociado a otra cuenta. No se puede vincular.',
+        icon: 'success',
+        title: '✅ Vinculado',
+        text: `GitHub vinculado exitosamente a ${finalEmail}`,
+        timer: 3000
       });
-    } else if (error.code === 'auth/credential-already-in-use') {
-      Swal.fire('❌ Error', 'Estas credenciales de GitHub ya están en uso con otra cuenta', 'error');
-    } else if (error.code === 'auth/popup-closed-by-user') {
-      // Usuario cerró el popup, no hacer nada
-    } else if (error.code === 'auth/requires-recent-login') {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Reautenticación requerida',
-        text: 'Por favor inicia sesión nuevamente para vincular GitHub',
-      });
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'Error al vincular GitHub',
-      });
+
+    } catch (error) {
+      console.error('Error linking GitHub:', error);
+      
+      if (error.code === 'auth/provider-already-linked') {
+        Swal.fire('ℹ️', 'GitHub ya está vinculado a tu cuenta', 'info');
+        setProviders(prev => [...new Set([...prev, 'github.com'])]);
+      } else if (error.code === 'auth/email-already-in-use') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Email en uso',
+          text: 'Este email de GitHub ya está asociado a otra cuenta. No se puede vincular.',
+        });
+      } else if (error.code === 'auth/credential-already-in-use') {
+        Swal.fire('❌ Error', 'Estas credenciales de GitHub ya están en uso con otra cuenta', 'error');
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // Usuario cerró el popup, no hacer nada
+      } else if (error.code === 'auth/requires-recent-login') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Reautenticación requerida',
+          text: 'Por favor inicia sesión nuevamente para vincular GitHub',
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'Error al vincular GitHub',
+        });
+      }
+    } finally {
+      setLinking(false);
     }
-  } finally {
-    setLinking(false);
-  }
-};
+  };
 
-  // Configuración específica para Facebook
-  const handleGoogleLink = async () => {
-  setLinking(true);
-  try {
-    const result = await linkWithPopup(auth.currentUser, GoogleProvider);
-    
-    await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), {
-      providers: arrayUnion('google.com'),
-      updatedAt: new Date(),
-    });
-
-    setProviders(prev => [...prev, 'google.com']);
-    Swal.fire('✅ Vinculado', 'Google vinculado exitosamente', 'success');
-    
-  } catch (error) {
-    // Manejo de errores similar a GitHub
-    if (error.code === 'auth/provider-already-linked') {
-      Swal.fire('ℹ️', 'Google ya está vinculado a tu cuenta', 'info');
-      setProviders(prev => [...prev, 'google.com']);
-    } else {
-      Swal.fire('❌ Error', error.message, 'error');
-    }
-  } finally {
-    setLinking(false);
-  }
-};
-
-// Configuración específica para Facebook
-const handleFacebookLink = async () => {
-  setLinking(true);
-  try {
-    const result = await linkWithPopup(auth.currentUser, providerFacebook);
-    
-    await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), {
-      providers: arrayUnion('facebook.com'),
-      updatedAt: new Date(),
-    });
-
-    setProviders(prev => [...prev, 'facebook.com']);
-    Swal.fire('✅ Vinculado', 'Facebook vinculado exitosamente', 'success');
-    
-  } catch (error) {
-    if (error.code === 'auth/provider-already-linked') {
-      Swal.fire('ℹ️', 'Facebook ya está vinculado a tu cuenta', 'info');
-      setProviders(prev => [...prev, 'facebook.com']);
-    } else {
-      Swal.fire('❌ Error', error.message, 'error');
-    }
-  } finally {
-    setLinking(false);
-  }
-};  
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -258,7 +246,7 @@ const handleFacebookLink = async () => {
   );
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 overflow-y-auto p-4">
       <div className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm rounded-3xl mt-10 p-6 shadow-2xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
@@ -284,7 +272,7 @@ const handleFacebookLink = async () => {
           <div className="flex items-center gap-3 text-lg text-gray-700">
             <User className="w-5 h-5" />
             <div>
-              <strong>Nombre:</strong> {userData?.firstName || 'No especificado'} {userData?.lastName || ''}
+              <strong>Nombre:</strong> {userData?.displayName || userData?.firstName || 'No especificado'} {userData?.lastName || ''}
             </div>
           </div>
         </div>
@@ -301,21 +289,21 @@ const handleFacebookLink = async () => {
                 name: 'Google', 
                 icon: <Google className="w-5 h-5" />, 
                 color: 'hover:bg-red-50 border-red-200',
-                action: handleGoogleLink  // ← Función específica
+                action: handleGoogleLink
               },
               { 
                 id: 'facebook.com', 
                 name: 'Facebook', 
                 icon: <Facebook className="w-5 h-5" />, 
                 color: 'hover:bg-blue-50 border-blue-200',
-                action: handleFacebookLink  // ← Función específica
+                action: handleFacebookLink
               },
               { 
                 id: 'github.com', 
                 name: 'GitHub', 
                 icon: <Github className="w-5 h-5" />, 
                 color: 'hover:bg-gray-50 border-gray-200',
-                action: handleGithubLink  // ← Función específica
+                action: handleGithubLink
               },
             ].map((provider) => (
               <div 
@@ -329,7 +317,7 @@ const handleFacebookLink = async () => {
                 
                 {providers.includes(provider.id) ? (
                   <span className="text-green-600 font-semibold bg-green-100 px-3 py-1 rounded-full text-sm">
-                    Vinculado
+                    ✓ Vinculado
                   </span>
                 ) : (
                   <button 
@@ -357,17 +345,19 @@ const handleFacebookLink = async () => {
         {/* Información adicional */}
         <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-6">
           <h3 className="font-semibold text-purple-800 mb-2">💡 Información importante</h3>
-          <p className="text-purple-700 text-sm">
-            Al vincular proveedores, podrás iniciar sesión con cualquiera de ellos usando el mismo email.
-            Todos los proveedores vinculados compartirán el mismo perfil y progreso.
-          </p>
+          <ul className="text-purple-700 text-sm space-y-1">
+            <li>• Al vincular un proveedor, se registrará en el historial de sesiones</li>
+            <li>• Podrás iniciar sesión con cualquier proveedor vinculado</li>
+            <li>• Todos los proveedores comparten el mismo perfil y progreso</li>
+            <li>• El historial muestra cada vinculación y cada inicio de sesión</li>
+          </ul>
         </div>
 
         {/* Botón volver */}
         <div className="text-center">
           <button 
             onClick={() => navigate('/dashboard')}
-            className="text-white font-semibold transition-colors"
+            className="inline-flex items-center gap-2 bg-white/50 hover:bg-white/70 text-purple-800 font-semibold px-6 py-2 rounded-xl transition-colors"
           >
             ← Volver al Dashboard
           </button>

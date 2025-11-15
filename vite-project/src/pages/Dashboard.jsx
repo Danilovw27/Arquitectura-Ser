@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, BookOpen, Globe, LogOut, User } from 'lucide-react';
-import { logout } from '../utils/auth.js'; // función que creamos antes
+import { Users, BookOpen, Globe, LogOut, User, Activity } from 'lucide-react';
+import { logout } from '../utils/auth.js';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -53,7 +53,7 @@ const Dashboard = () => {
         </div>
 
         {/* Modules Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {/* Usuarios Module */}
           <div
             className={`group relative bg-white/90 backdrop-blur-sm rounded-3xl p-8 cursor-pointer transition-all duration-300 transform ${
@@ -159,10 +159,61 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* Historial de Sesiones Module */}
+          <div
+            className={`group relative bg-white/90 backdrop-blur-sm rounded-3xl p-8 cursor-pointer transition-all duration-300 transform ${
+              hoveredModule === 'historial' ? 'scale-105 bg-white/95' : 'hover:scale-102'
+            } shadow-2xl`}
+            onMouseEnter={() => setHoveredModule('historial')}
+            onMouseLeave={() => setHoveredModule(null)}
+            onClick={() => navigate('/session')}
+          >
+            {/* Floating dots */}
+            <div className="absolute top-6 right-6 w-3 h-3 bg-orange-400/40 rounded-full"></div>
+            <div className="absolute top-12 right-12 w-2 h-2 bg-red-400/30 rounded-full"></div>
+            <div className="absolute bottom-8 left-8 w-4 h-4 bg-orange-300/20 rounded-full"></div>
+
+            <div className="relative">
+              {/* Icon */}
+              <div className={`w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 ${
+                hoveredModule === 'historial' ? 'rotate-3 scale-110' : ''
+              }`}>
+                <Activity className="w-8 h-8 text-white" />
+              </div>
+
+              {/* Content */}
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Historial</h2>
+              <p className="text-gray-600 text-lg mb-8 leading-relaxed">
+                Monitorea todos los accesos y sesiones del sistema en tiempo real. Control completo de la actividad de usuarios.
+              </p>
+
+              {/* Features */}
+              <div className="space-y-3 mb-8">
+                <div className="flex items-center gap-3 text-gray-700">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">Seguimiento de sesiones</span>
+                </div>
+                <div className="flex items-center gap-3 text-gray-700">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="text-sm">Análisis de actividad</span>
+                </div>
+              </div>
+
+              {/* Action button - appears on hover */}
+              <div className={`transition-all duration-300 ${
+                hoveredModule === 'historial' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}>
+                <button className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-200 shadow-lg">
+                  Ver Historial
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Bottom Info */}
-        <div className="text-center mt-4">
+        <div className="text-center mt-8">
           <p className="text-white/80">
             Haz clic en cualquier módulo para acceder a sus funcionalidades
           </p>
