@@ -1,7 +1,14 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { getFirestore } from "firebase/firestore";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  GithubAuthProvider,
+  linkWithPopup,
+  linkWithCredential,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCWttbyjL2Lv0G_vhTPKkY3lzUbvX7yDik",
@@ -15,10 +22,25 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
-const auth = getAuth(app);
-const GoogleProvider = new GoogleAuthProvider();
-const db = getFirestore(app);
+// Initialize services
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-// Export the services
-export { auth, GoogleProvider, db, signOut };
+// Providers
+export const GoogleProvider = new GoogleAuthProvider();
+export const providerFacebook = new FacebookAuthProvider();
+export const providerGitHub = new GithubAuthProvider();
+
+// Configurar scopes
+providerGitHub.addScope('user:email');
+providerGitHub.setCustomParameters({ allow_signup: 'false' });
+GoogleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Helper functions para vinculación
+export const linkProvider = async (user, provider) => {
+  const result = await linkWithPopup(user, provider);
+  return result;
+};
+
+// Exportar proveedores base
+export { GoogleAuthProvider, FacebookAuthProvider, GithubAuthProvider, linkWithCredential };
