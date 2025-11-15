@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { Users, BookOpen, Globe } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, BookOpen, Globe, LogOut, User } from 'lucide-react';
+import { logout } from '../utils/auth.js'; // función que creamos antes
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [hoveredModule, setHoveredModule] = useState(null);
 
   const handleModuleClick = (moduleType) => {
     console.log(`Clicked on ${moduleType} module`);
-    // navigate(`/${moduleType}`);
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
   };
 
   return (
@@ -26,6 +32,24 @@ const Dashboard = () => {
             <span className="text-5xl font-bold">Learn Flow Dashboard</span>
           </div>
           <p className="text-white/90 text-xl">Gestiona tu plataforma de aprendizaje</p>
+
+          {/* Botones en el header */}
+          <div className="mt-6 flex justify-center gap-4">
+            <button
+              onClick={handleProfileClick}
+              className="inline-flex items-center gap-2 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition-all duration-200 transform hover:scale-105"
+            >
+              <User size={18} />
+              Mi Perfil
+            </button>
+            <button
+              onClick={() => logout(navigate)}
+              className="inline-flex items-center gap-2 bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition-all duration-200 transform hover:scale-105"
+            >
+              <LogOut size={18} />
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         {/* Modules Grid */}
@@ -76,10 +100,9 @@ const Dashboard = () => {
               }`}>
                 <a href="/users">
                   <button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg">
-                  Gestionar Usuarios
+                    Gestionar Usuarios
                   </button>
                 </a>
-                
               </div>
             </div>
           </div>
@@ -129,9 +152,9 @@ const Dashboard = () => {
                 hoveredModule === 'lessons' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               }`}>
                 <a href="/Lessons">
-                <button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg">
-                  Gestionar Lessons
-                </button>
+                  <button className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg">
+                    Gestionar Lessons
+                  </button>
                 </a>
               </div>
             </div>
