@@ -19,6 +19,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import DataDeletion from './pages/DataDeletion';
 import Profile from './pages/Profile';
+import Session from './pages/SessionHistory';
 
 function App() {
 
@@ -44,6 +45,7 @@ function App() {
       <Route path="/terms" element={<Terms />} ></Route>
       <Route path="/data-deletion" element={<DataDeletion />} ></Route>
       <Route path="/profile" element={<Profile />} ></Route>
+      <Route path="/session" element={<Session />} ></Route>
     </Routes>
    
    </BrowserRouter>
