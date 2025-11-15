@@ -564,7 +564,7 @@ const LessonsInterface = () => {
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="flex-1 text-white px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                      className="flex-1 text-white px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                       disabled={saving}
                     >
                       Cancelar

@@ -86,7 +86,7 @@ const Register = () => {
       });
 
       // Redirigir al login o dashboard
-      navigate("/login");
+      navigate("/Dashboard");
       
     } catch (error) {
       console.error('Error completo en registro:', error);
@@ -306,7 +306,7 @@ const Register = () => {
                 Already have an account?{' '}
               </span>
               <a
-                href="/Dashboard"
+                href="/Login"
                 className="text-purple-600 hover:text-purple-700 font-semibold transition-colors"
               >
                 Sign in
