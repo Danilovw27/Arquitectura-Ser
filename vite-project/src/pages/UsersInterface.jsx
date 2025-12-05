@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Edit, Trash2, ArrowLeft, UserCheck, UserX, Crown, Shield, User, UserPlus, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Users, Search, Edit, Trash2, ArrowLeft, UserCheck, UserX, Crown, Shield, User, UserPlus, Mail, Lock, Eye, EyeOff, FileText, Table } from 'lucide-react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const UsersInterface = () => {
   const [users, setUsers] = useState([]);
@@ -35,6 +39,125 @@ const UsersInterface = () => {
     estado: 'activo'
   });
   const navigate = useNavigate();
+
+  // Función para exportar a PDF
+  const exportToPDF = () => {
+    if (users.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF('landscape');
+      
+      // Encabezado
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Reporte de Usuarios', 148, 20, { align: 'center' });
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`, 148, 30, { align: 'center' });
+      
+      // Tabla
+      const tableData = users.map(user => [
+        user.firstName || '',
+        user.lastName || '',
+        user.email || '',
+        user.rol ? user.rol.charAt(0).toUpperCase() + user.rol.slice(1) : '',
+        user.estado === 'activo' ? 'Activo' : 'Inactivo',
+        user.metodo || 'N/A',
+        user.creado 
+          ? (user.creado.toDate ? user.creado.toDate().toLocaleDateString('es-ES') : new Date(user.creado).toLocaleDateString('es-ES'))
+          : 'Sin fecha'
+      ]);
+      
+      autoTable(doc, {
+        head: [['Nombre', 'Apellido', 'Email', 'Rol', 'Estado', 'Método', 'Fecha Creación']],
+        body: tableData,
+        startY: 40,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [139, 92, 246], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+      
+      // Pie de página
+      const pageCount = doc.internal.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Página ${i} de ${pageCount}`, 148, doc.internal.pageSize.height - 10, { align: 'center' });
+      }
+      
+      doc.save(`usuarios-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      Swal.fire('Éxito', 'PDF exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      Swal.fire('Error', 'No se pudo generar el PDF', 'error');
+    }
+  };
+
+  // Función para exportar a Excel
+  const exportToExcel = () => {
+    if (users.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const worksheetData = users.map(user => ({
+        'Nombre': user.firstName || '',
+        'Apellido': user.lastName || '',
+        'Email': user.email || '',
+        'Rol': user.rol ? user.rol.charAt(0).toUpperCase() + user.rol.slice(1) : '',
+        'Estado': user.estado === 'activo' ? 'Activo' : 'Inactivo',
+        'Método': user.metodo || 'N/A',
+        'Fecha Creación': user.creado 
+          ? (user.creado.toDate ? user.creado.toDate().toLocaleDateString('es-ES') : new Date(user.creado).toLocaleDateString('es-ES'))
+          : 'Sin fecha',
+        'ID': user.id || ''
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
+      
+      // Auto ajustar columnas
+      const wscols = [
+        { wch: 15 }, // Nombre
+        { wch: 15 }, // Apellido
+        { wch: 25 }, // Email
+        { wch: 12 }, // Rol
+        { wch: 12 }, // Estado
+        { wch: 12 }, // Método
+        { wch: 15 }, // Fecha Creación
+        { wch: 25 }  // ID
+      ];
+      worksheet['!cols'] = wscols;
+      
+      // Generar archivo Excel
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const data = new Blob([excelBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' 
+      });
+      
+      saveAs(data, `usuarios-${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      Swal.fire('Éxito', 'Excel exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando Excel:', error);
+      Swal.fire('Error', 'No se pudo generar el archivo Excel', 'error');
+    }
+  };
 
   const handleBack = () => {
     navigate('/dashboard');
@@ -406,6 +529,26 @@ const UsersInterface = () => {
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportToPDF}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                title="Exportar a PDF"
+                disabled={loading || users.length === 0}
+              >
+                <FileText className="w-4 h-4" />
+                PDF
+              </button>
+              <button
+                onClick={exportToExcel}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                title="Exportar a Excel"
+                disabled={loading || users.length === 0}
+              >
+                <Table className="w-4 h-4" />
+                Excel
+              </button>
+            </div>
             <button
               onClick={() => setShowCreateModal(true)}
               className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"

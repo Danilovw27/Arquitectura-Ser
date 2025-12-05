@@ -1,10 +1,14 @@
 // LessonsInterface.jsx
 import React, { useState, useEffect } from 'react';
-import { Languages, Plus, Edit, Trash2, CheckCircle, X, BookOpen, Globe, ArrowLeft } from 'lucide-react';
+import { Languages, Plus, Edit, Trash2, CheckCircle, X, Globe, ArrowLeft, FileText, Table } from 'lucide-react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db} from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const LessonsInterface = () => {
   const [lessons, setLessons] = useState([]);
@@ -45,7 +49,130 @@ const LessonsInterface = () => {
     { value: 'avanzado', label: 'Avanzado (C1-C2)', color: 'bg-red-100 text-red-800' }
   ];
 
-  
+  // Función para exportar a PDF
+  const exportToPDF = () => {
+    if (lessons.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      
+      // Encabezado
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Reporte de Lecciones', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`, 105, 30, { align: 'center' });
+      
+      // Tabla
+      const tableData = lessons.map(lesson => [
+        lesson.title || 'Sin título',
+        lesson.description || 'Sin descripción',
+        getLanguageLabel(lesson.language) || 'No especificado',
+        getStatusLabel(lesson.status) || 'No especificado',
+        getLevelLabel(lesson.level) || 'No especificado',
+        lesson.createdAt 
+          ? (lesson.createdAt.toDate ? lesson.createdAt.toDate().toLocaleDateString('es-ES') : new Date(lesson.createdAt).toLocaleDateString('es-ES'))
+          : 'Sin fecha'
+      ]);
+      
+      autoTable(doc, {
+        head: [['Título', 'Descripción', 'Idioma', 'Estado', 'Nivel', 'Fecha Creación']],
+        body: tableData,
+        startY: 40,
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+      
+      // Pie de página
+      const pageCount = doc.internal.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Página ${i} de ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
+      }
+      
+      doc.save(`lecciones-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      Swal.fire('Éxito', 'PDF exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      Swal.fire('Error', 'No se pudo generar el PDF', 'error');
+    }
+  };
+
+  // Función para exportar a Excel
+  const exportToExcel = () => {
+    if (lessons.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const worksheetData = lessons.map(lesson => ({
+        'Título': lesson.title || 'Sin título',
+        'Descripción': lesson.description || 'Sin descripción',
+        'Idioma': getLanguageLabel(lesson.language) || 'No especificado',
+        'Estado': getStatusLabel(lesson.status) || 'No especificado',
+        'Nivel': getLevelLabel(lesson.level) || 'No especificado',
+        'Fecha Creación': lesson.createdAt 
+          ? (lesson.createdAt.toDate ? lesson.createdAt.toDate().toLocaleDateString('es-ES') : new Date(lesson.createdAt).toLocaleDateString('es-ES'))
+          : 'Sin fecha',
+        'Última Actualización': lesson.updatedAt 
+          ? (lesson.updatedAt.toDate ? lesson.updatedAt.toDate().toLocaleDateString('es-ES') : new Date(lesson.updatedAt).toLocaleDateString('es-ES'))
+          : 'Sin fecha'
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Lecciones');
+      
+      // Auto ajustar columnas
+      const wscols = [
+        { wch: 30 }, // Título
+        { wch: 50 }, // Descripción
+        { wch: 15 }, // Idioma
+        { wch: 15 }, // Estado
+        { wch: 20 }, // Nivel
+        { wch: 15 }, // Fecha Creación
+        { wch: 20 }  // Última Actualización
+      ];
+      worksheet['!cols'] = wscols;
+      
+      // Generar archivo Excel
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const data = new Blob([excelBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' 
+      });
+      
+      saveAs(data, `lecciones-${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      Swal.fire('Éxito', 'Excel exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando Excel:', error);
+      Swal.fire('Error', 'No se pudo generar el archivo Excel', 'error');
+    }
+  };
+
+  // Función auxiliar para obtener etiqueta de nivel
+  const getLevelLabel = (level) => {
+    const levelObj = levels.find(l => l.value === level);
+    return levelObj ? levelObj.label : level;
+  };
+
   const loadLessons = async () => {
     try {
       setLoading(true);
@@ -82,24 +209,7 @@ const LessonsInterface = () => {
     loadLessons();
   }, []);
 
-  const checkAuth = () => {
-    if (auth.currentUser) {
-      console.log('✅ Usuario autenticado:', auth.currentUser.email);
-      loadLessons();
-    } else {
-      console.log('❌ NO hay usuario autenticado');
-      Swal.fire({
-        icon: 'warning',
-        title: 'No autenticado',
-        text: 'Debes iniciar sesión primero',
-        confirmButtonText: 'Ir al login'
-      }).then(() => {
-        navigate('/'); // o la ruta de tu login
-      });
-    }
-  };
 
- 
 
   // CREAR - Abrir modal
   const openCreateModal = () => {
@@ -305,7 +415,7 @@ const LessonsInterface = () => {
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-indigo-600 via-gray-700 to-blue-400 overflow-y-auto">
-      <div className="w-4/5 h-full mx-auto my-[2%] p-5 md:p-6 lg:p-8 " >
+      <div className="w-4/5 h-full mx-auto my-[2%] p-5 md:p-6 lg:p-8">
         
         {/* HEADER */}
         <div className="flex items-center justify-between mb-8">
@@ -325,7 +435,27 @@ const LessonsInterface = () => {
             </div>
           </div>
           
-          <div className="flex items-center ml-4 gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportToPDF}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                title="Exportar a PDF"
+                disabled={loading || lessons.length === 0}
+              >
+                <FileText className="w-4 h-4" />
+                PDF
+              </button>
+              <button
+                onClick={exportToExcel}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                title="Exportar a Excel"
+                disabled={loading || lessons.length === 0}
+              >
+                <Table className="w-4 h-4" />
+                Excel
+              </button>
+            </div>
             <button
               onClick={openCreateModal}
               className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"

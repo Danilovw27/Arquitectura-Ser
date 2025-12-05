@@ -4,17 +4,22 @@ import {
   ArrowLeft, 
   Clock, 
   User, 
-  MapPin, 
-  Calendar, 
   Filter,
   Download,
   Search,
   Shield,
   Activity,
-  Users
+  Users,
+  FileText,
+  Table
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import Swal from 'sweetalert2';
 
 const SessionHistory = () => {
   const navigate = useNavigate();
@@ -32,6 +37,162 @@ const SessionHistory = () => {
   useEffect(() => {
     fetchSessionHistory();
   }, []);
+
+  // Función para exportar a PDF
+  const exportToPDF = () => {
+    if (sessions.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF('landscape');
+      
+      // Encabezado
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Reporte de Historial de Sesiones', 148, 20, { align: 'center' });
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`, 148, 30, { align: 'center' });
+      
+      // Estadísticas
+      doc.setFontSize(12);
+      doc.text(`Total Sesiones: ${stats.totalSessions} | Usuarios Únicos: ${stats.uniqueUsers} | Activos Hoy: ${stats.activeToday}`, 148, 40, { align: 'center' });
+      
+      // Tabla
+      const tableData = sessions.map(session => [
+        session.displayName || 'Sin nombre',
+        session.email || '',
+        getProviderName(session.provider) || '',
+        session.loginTime 
+          ? (session.loginTime.toDate ? session.loginTime.toDate().toLocaleDateString('es-ES') : new Date(session.loginTime).toLocaleDateString('es-ES'))
+          : 'Sin fecha',
+        session.loginTime 
+          ? (session.loginTime.toDate ? session.loginTime.toDate().toLocaleTimeString('es-ES') : new Date(session.loginTime).toLocaleTimeString('es-ES'))
+          : 'Sin hora'
+      ]);
+      
+      autoTable(doc, {
+        head: [['Nombre', 'Email', 'Proveedor', 'Fecha', 'Hora']],
+        body: tableData,
+        startY: 50,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [147, 51, 234], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+      
+      // Pie de página
+      const pageCount = doc.internal.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Página ${i} de ${pageCount}`, 148, doc.internal.pageSize.height - 10, { align: 'center' });
+      }
+      
+      doc.save(`historial-sesiones-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      Swal.fire('Éxito', 'PDF exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      Swal.fire('Error', 'No se pudo generar el PDF', 'error');
+    }
+  };
+
+  // Función para exportar a Excel
+  const exportToExcel = () => {
+    if (sessions.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const worksheetData = sessions.map(session => ({
+        'Nombre': session.displayName || 'Sin nombre',
+        'Email': session.email || '',
+        'Proveedor': getProviderName(session.provider) || '',
+        'Fecha Login': session.loginTime 
+          ? (session.loginTime.toDate ? session.loginTime.toDate().toLocaleDateString('es-ES') : new Date(session.loginTime).toLocaleDateString('es-ES'))
+          : 'Sin fecha',
+        'Hora Login': session.loginTime 
+          ? (session.loginTime.toDate ? session.loginTime.toDate().toLocaleTimeString('es-ES') : new Date(session.loginTime).toLocaleTimeString('es-ES'))
+          : 'Sin hora',
+        'ID Usuario': session.userId || '',
+        'Tiempo Transcurrido': getTimeAgo(session.loginTime)
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sesiones');
+      
+      // Auto ajustar columnas
+      const wscols = [
+        { wch: 20 }, // Nombre
+        { wch: 25 }, // Email
+        { wch: 15 }, // Proveedor
+        { wch: 15 }, // Fecha Login
+        { wch: 15 }, // Hora Login
+        { wch: 25 }, // ID Usuario
+        { wch: 20 }  // Tiempo Transcurrido
+      ];
+      worksheet['!cols'] = wscols;
+      
+      // Generar archivo Excel
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const data = new Blob([excelBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' 
+      });
+      
+      saveAs(data, `historial-sesiones-${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      Swal.fire('Éxito', 'Excel exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando Excel:', error);
+      Swal.fire('Error', 'No se pudo generar el archivo Excel', 'error');
+    }
+  };
+
+  // Función para exportar a CSV
+  const exportToCSV = () => {
+    if (sessions.length === 0) {
+      Swal.fire('Información', 'No hay datos para exportar', 'info');
+      return;
+    }
+
+    try {
+      const csvContent = [
+        ['Email', 'Nombre', 'Proveedor', 'Fecha Login', 'Hora'].join(','),
+        ...sessions.map(s => [
+          s.email || '',
+          s.displayName || 'Sin nombre',
+          getProviderName(s.provider) || '',
+          s.loginTime 
+            ? (s.loginTime.toDate ? s.loginTime.toDate().toLocaleDateString('es-ES') : new Date(s.loginTime).toLocaleDateString('es-ES'))
+            : 'Sin fecha',
+          s.loginTime 
+            ? (s.loginTime.toDate ? s.loginTime.toDate().toLocaleTimeString('es-ES') : new Date(s.loginTime).toLocaleTimeString('es-ES'))
+            : 'Sin hora'
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `historial-sesiones-${new Date().toISOString().split('T')[0]}.csv`);
+      
+      Swal.fire('Éxito', 'CSV exportado correctamente', 'success');
+    } catch (error) {
+      console.error('Error generando CSV:', error);
+      Swal.fire('Error', 'No se pudo generar el archivo CSV', 'error');
+    }
+  };
 
   const fetchSessionHistory = async () => {
     try {
@@ -51,6 +212,7 @@ const SessionHistory = () => {
       calculateStats(sessionData);
     } catch (error) {
       console.error('Error fetching sessions:', error);
+      Swal.fire('Error', 'No se pudieron cargar las sesiones', 'error');
     } finally {
       setLoading(false);
     }
@@ -178,28 +340,6 @@ const SessionHistory = () => {
     return matchesSearch && matchesProvider;
   });
 
-  const exportToCSV = () => {
-    const csvContent = [
-      ['Email', 'Nombre', 'Proveedor', 'Fecha Login', 'Hora'].join(','),
-      ...filteredSessions.map(s => [
-        s.email,
-        s.displayName,
-        getProviderName(s.provider),
-        formatDate(s.loginTime),
-        new Date(s.loginTime).toLocaleTimeString('es-ES')
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `historial-sesiones-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
-
-
-
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 overflow-y-auto">
       <div className="absolute inset-0 overflow-hidden">
@@ -291,17 +431,37 @@ const SessionHistory = () => {
                     <option value="facebook.com">Facebook</option>
                     <option value="github.com">GitHub</option>
                     <option value="password">Email/Password</option>
-                    <option value="email">Email/Password</option>
                   </select>
                 </div>
 
-                <button
-                  onClick={exportToCSV}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-600 transition-all duration-200 shadow-lg"
-                >
-                  <Download className="w-5 h-5" />
-                  Exportar CSV
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={exportToPDF}
+                    className="inline-flex items-center gap-2 bg-red-500 text-white px-4 py-3 rounded-xl font-semibold hover:bg-red-600 transition-all duration-200 shadow-lg"
+                    title="Exportar a PDF"
+                    disabled={loading || sessions.length === 0}
+                  >
+                    <FileText className="w-5 h-5" />
+                    PDF
+                  </button>
+                  <button
+                    onClick={exportToExcel}
+                    className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-3 rounded-xl font-semibold hover:bg-green-600 transition-all duration-200 shadow-lg"
+                    title="Exportar a Excel"
+                    disabled={loading || sessions.length === 0}
+                  >
+                    <Table className="w-5 h-5" />
+                    Excel
+                  </button>
+                  <button
+                    onClick={exportToCSV}
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-600 transition-all duration-200 shadow-lg"
+                    disabled={loading || sessions.length === 0}
+                  >
+                    <Download className="w-5 h-5" />
+                    CSV
+                  </button>
+                </div>
               </div>
             </div>
           </div>
